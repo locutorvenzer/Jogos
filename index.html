@@ -965,6 +965,135 @@
 #extra-game-frame{display:block;width:100%;height:100%;border:0;background:#05070d;}
 @media(max-width:720px){.game-library-grid{grid-template-columns:1fr;gap:9px;}.game-library-card{min-height:68px;padding:9px 11px;}.game-library-icon{width:42px;height:42px;flex-basis:42px;font-size:24px;}#menu-page-games{padding:7px;}.game-library-panel{max-height:98vh!important;padding:16px!important;}}
 @media(max-height:620px) and (min-width:721px){.game-library-panel{max-height:98vh!important;padding:14px!important;}.game-library-grid{gap:7px;}.game-library-card{min-height:62px;padding:7px 10px;}.game-library-icon{width:38px;height:38px;flex-basis:38px;font-size:22px;}.game-library-panel .menu-panel-header{margin-bottom:8px;}.game-library-footer{margin-top:9px;}}
+
+
+/* DESTAQUE DO CATÁLOGO: letreiro independente inspirado em marquee de arcade clássico. */
+#menu-page-home .pub-arcade-discovery {
+  --arcade-violet:#a98aff;
+  position:absolute; z-index:8; top:32.2%; right:6.2%;
+  width:min(370px,31vw); min-height:142px;
+  display:flex; align-items:center; gap:clamp(10px,1.2vw,16px);
+  padding:16px 17px; text-align:left; cursor:pointer; isolation:isolate; overflow:hidden;
+  color:#fff4df; border:1px solid rgba(212,184,255,.82); border-radius:17px;
+  background:
+    radial-gradient(ellipse at 8% 10%,rgba(255,211,125,.25),transparent 42%),
+    linear-gradient(112deg,rgba(62,39,104,.98),rgba(35,22,62,.98) 58%,rgba(66,34,75,.98));
+  box-shadow:0 0 0 2px rgba(135,97,210,.16),0 0 24px rgba(158,112,255,.34),0 15px 34px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.34),inset 0 -5px 12px rgba(0,0,0,.24);
+  transition:transform .24s ease,filter .24s ease,box-shadow .24s ease,border-color .24s ease;
+  animation:arcadeMarqueePulse 3.4s ease-in-out infinite;
+}
+#menu-page-home .pub-arcade-discovery::before {
+  content:""; position:absolute; z-index:-1; inset:5px; border:1px solid rgba(255,221,166,.26); border-radius:12px; pointer-events:none;
+}
+#menu-page-home .pub-arcade-discovery::after {
+  content:""; position:absolute; z-index:-1; top:-55%; bottom:-55%; left:-35%; width:23%;
+  transform:translateX(-180%) rotate(18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,245,219,.34),transparent);
+  transition:transform .8s cubic-bezier(.2,.65,.2,1); pointer-events:none;
+}
+#menu-page-home .pub-arcade-discovery:hover,
+#menu-page-home .pub-arcade-discovery:focus-visible {
+  transform:translateY(-5px) scale(1.025); filter:brightness(1.16) saturate(1.12);
+  border-color:#ffe0a0; outline:none;
+  box-shadow:0 0 0 3px rgba(178,143,255,.22),0 0 36px rgba(177,126,255,.54),0 20px 40px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.48);
+}
+#menu-page-home .pub-arcade-discovery:hover::after,
+#menu-page-home .pub-arcade-discovery:focus-visible::after { transform:translateX(690%) rotate(18deg); }
+#menu-page-home .pub-arcade-discovery:active { transform:translateY(-1px) scale(.99); }
+.arcade-discovery-icon {
+  flex:0 0 clamp(48px,4.2vw,60px); width:clamp(48px,4.2vw,60px); height:clamp(48px,4.2vw,60px);
+  display:grid; place-items:center; border-radius:15px; color:#2d1b42; font-size:clamp(22px,2vw,29px);
+  background:linear-gradient(145deg,#fff0c9 0%,#e4c4ff 52%,#a78bfa 100%);
+  border:1px solid rgba(255,255,255,.72); box-shadow:0 0 18px rgba(207,173,255,.42),inset 0 1px 0 #fff;
+}
+.arcade-discovery-copy { display:flex; flex:1; min-width:0; flex-direction:column; align-items:flex-start; gap:4px; }
+.arcade-discovery-kicker { color:#f7dca6; font:900 8px 'Manrope',sans-serif; letter-spacing:.15em; white-space:nowrap; }
+.arcade-discovery-kicker i { color:#ffe8ad; margin-right:4px; }
+.arcade-discovery-copy strong { color:#fff2d8; font:900 clamp(15px,1.45vw,20px)/1.05 'Cinzel',serif; letter-spacing:.1em; text-shadow:0 0 16px rgba(221,184,255,.44),0 2px 5px rgba(0,0,0,.55); }
+.arcade-discovery-sub { color:#d9c9f0; font:600 clamp(9px,.72vw,11px)/1.3 'Manrope',sans-serif; }
+.arcade-discovery-action { display:flex; align-items:center; gap:8px; margin-top:5px; color:#ffdb91; font:900 8px 'Manrope',sans-serif; letter-spacing:.16em; }
+.arcade-discovery-action i { font-size:10px; transition:transform .2s ease; }
+#menu-page-home .pub-arcade-discovery:hover .arcade-discovery-action i { transform:translateX(5px); }
+.arcade-discovery-count {
+  flex:0 0 42px; width:42px; height:42px; display:grid; place-content:center; text-align:center;
+  border-radius:12px; color:#fff2d4; background:linear-gradient(145deg,rgba(244,192,111,.24),rgba(149,105,211,.2));
+  border:1px solid rgba(255,218,156,.48); font:900 18px/.9 'Barlow Condensed',sans-serif;
+  box-shadow:inset 0 0 14px rgba(255,218,156,.09),0 0 14px rgba(245,198,119,.12);
+}
+.arcade-discovery-count small { display:block; margin-top:3px; color:#f5d9a8; font:800 6px 'Manrope',sans-serif; letter-spacing:.1em; }
+@keyframes arcadeMarqueePulse {
+  0%,100% { box-shadow:0 0 0 2px rgba(135,97,210,.13),0 0 19px rgba(158,112,255,.26),0 15px 34px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.34),inset 0 -5px 12px rgba(0,0,0,.24); }
+  50% { box-shadow:0 0 0 3px rgba(190,158,255,.2),0 0 31px rgba(172,124,255,.45),0 16px 36px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.38),inset 0 -5px 12px rgba(0,0,0,.24); }
+}
+
+/* Instagram: acabamento luminoso multicolorido, limitado à tela inicial. */
+#menu-page-home .pub-button-instagram {
+  --button:#f276a8; --button-dark:#61265d; --button-glow:rgba(244,91,160,.48);
+  border-color:rgba(255,190,203,.78);
+  background:
+    radial-gradient(circle at 93% 8%,rgba(255,202,102,.25),transparent 30%),
+    linear-gradient(108deg,#5b245e 0%,#9e326f 48%,#a64d42 100%);
+  box-shadow:0 0 0 1px rgba(250,122,183,.18),0 0 24px rgba(239,83,158,.34),0 10px 22px rgba(0,0,0,.43),inset 0 1px rgba(255,255,255,.42),inset 0 -4px rgba(0,0,0,.2);
+  animation:instagramMenuGlow 3.1s ease-in-out infinite;
+}
+#menu-page-home .pub-button-instagram .pub-button-icon {
+  color:#fff; border:1px solid rgba(255,255,255,.68); border-radius:14px;
+  background:linear-gradient(140deg,#ffd36c 0%,#fa8059 34%,#dc3f91 67%,#7453ce 100%);
+  box-shadow:0 0 19px rgba(255,115,163,.4),inset 0 1px 0 rgba(255,255,255,.7),0 4px 10px rgba(0,0,0,.28);
+  font-size:clamp(18px,1.6vw,23px);
+}
+#menu-page-home .pub-button-instagram .pub-button-copy strong { color:#fff8fa; text-shadow:0 0 13px rgba(255,195,219,.38),0 2px 4px rgba(0,0,0,.48); }
+#menu-page-home .pub-button-instagram .pub-button-copy small { color:#ffe3ed; }
+#menu-page-home .pub-button-instagram:hover,
+#menu-page-home .pub-button-instagram:focus-visible {
+  border-color:#ffe0d0; box-shadow:0 0 0 2px rgba(255,148,193,.2),0 0 34px rgba(248,94,169,.55),0 15px 30px rgba(0,0,0,.52),inset 0 1px rgba(255,255,255,.48);
+}
+@keyframes instagramMenuGlow {
+  0%,100% { filter:saturate(1); }
+  50% { filter:saturate(1.18) brightness(1.055); }
+}
+
+@media (max-width:900px) {
+  #menu-page-home .pub-arcade-discovery { top:31.5%; right:3.2%; width:34vw; min-width:205px; min-height:112px; padding:11px; gap:9px; }
+  .arcade-discovery-icon { flex-basis:40px; width:40px; height:40px; border-radius:11px; font-size:19px; }
+  .arcade-discovery-kicker { font-size:7px; letter-spacing:.1em; }
+  .arcade-discovery-copy strong { font-size:14px; }
+  .arcade-discovery-sub { font-size:9px; }
+  .arcade-discovery-action { font-size:7px; }
+  .arcade-discovery-count { flex-basis:32px; width:32px; height:36px; font-size:15px; }
+}
+@media (max-width:600px) {
+  #menu-page-home .pub-arcade-discovery {
+    top:calc(23% + 50px); right:5%; width:66%; min-width:0; min-height:47px; height:47px;
+    padding:5px 8px; gap:8px; border-radius:11px; animation-duration:4s;
+    box-shadow:0 0 0 1px rgba(135,97,210,.16),0 0 18px rgba(158,112,255,.28),0 8px 16px rgba(0,0,0,.46),inset 0 1px rgba(255,255,255,.34);
+  }
+  #menu-page-home .pub-arcade-discovery::before { inset:3px; border-radius:8px; }
+  .arcade-discovery-icon { flex-basis:32px; width:32px; height:32px; border-radius:8px; font-size:15px; }
+  .arcade-discovery-copy { gap:1px; }
+  .arcade-discovery-kicker { font-size:6px; letter-spacing:.08em; }
+  .arcade-discovery-copy strong { font-size:11px; letter-spacing:.08em; }
+  .arcade-discovery-sub { font-size:7px; white-space:nowrap; }
+  .arcade-discovery-action { display:none; }
+  .arcade-discovery-count { flex-basis:27px; width:27px; height:30px; border-radius:8px; font-size:13px; }
+  .arcade-discovery-count small { font-size:5px; margin-top:2px; }
+  #menu-page-home .pub-menu-content { top:39%; }
+  #menu-page-home .pub-button-instagram { border-width:1px; box-shadow:0 0 0 1px rgba(250,122,183,.2),0 0 20px rgba(239,83,158,.38),0 8px 18px rgba(0,0,0,.45),inset 0 1px rgba(255,255,255,.42); }
+}
+@media (max-width:360px) {
+  #menu-page-home .pub-arcade-discovery { width:72%; right:4%; }
+  .arcade-discovery-kicker { display:none; }
+  .arcade-discovery-sub { font-size:6.5px; }
+}
+@media (max-height:680px) and (max-width:600px) {
+  #menu-page-home .pub-menu-content { top:40%; }
+  #menu-page-home .pub-arcade-discovery { top:calc(23% + 44px); height:43px; min-height:43px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #menu-page-home .pub-arcade-discovery,
+  #menu-page-home .pub-button-instagram { animation:none !important; }
+}
+
 </style>
 </head>
 <body class="relative">
@@ -1050,11 +1179,6 @@
 <span class="pub-button-arrow"><i class="fa-solid fa-chevron-right"></i></span>
 </button>
 
-<button class="pub-menu-button pub-button-games" onclick="openMenuPage('games')" type="button">
-  <span class="pub-button-icon"><i class="fa-solid fa-gamepad"></i></span>
-  <span class="pub-button-copy"><strong>MAIS JOGOS</strong><small>Explore outros jogos do universo Venzer</small></span>
-  <span class="pub-button-arrow"><i class="fa-solid fa-chevron-right"></i></span>
-</button>
 <button class="pub-menu-button pub-button-settings" onclick="openMenuPage('settings')" type="button">
 <span class="pub-button-icon"><i class="fa-solid fa-sliders"></i></span>
 <span class="pub-button-copy"><strong>CONFIGURAÇÕES</strong><small>Som da música e dos efeitos</small></span>
@@ -1073,6 +1197,16 @@
 </nav>
 <div class="pub-menu-note"><i class="fa-solid fa-record-vinyl"></i> PUB PREMIUM EDITION <span>·</span> 3D ARCADE EXPERIENCE</div>
 </div>
+<button aria-label="Abrir Mais Jogos: explore os jogos do universo Venzer" class="pub-arcade-discovery" onclick="openMenuPage('games')" type="button">
+  <span class="arcade-discovery-icon"><i class="fa-solid fa-gamepad"></i></span>
+  <span class="arcade-discovery-copy">
+    <small class="arcade-discovery-kicker"><i class="fa-solid fa-sparkles"></i> VENZER ARCADE · EXPLORE</small>
+    <strong>MAIS JOGOS</strong>
+    <span class="arcade-discovery-sub">Outras aventuras esperam por você</span>
+    <span class="arcade-discovery-action">ENTRAR NA ARCADE <i class="fa-solid fa-arrow-right"></i></span>
+  </span>
+  <span class="arcade-discovery-count">7<br><small>JOGOS</small></span>
+</button>
 <div aria-hidden="true" class="pub-table-display">
 <div class="pub-table-shadow"></div>
 <div class="pub-table-legs"><i></i><i></i><i></i></div>
