@@ -1139,14 +1139,15 @@
 .graphics-quality-option .quality-check{width:auto;color:#a9e9b8;opacity:0}
 .graphics-quality-option.selected .quality-check{opacity:1}
 @media(max-width:600px){
- .graphics-quality-picker{top:auto;right:12px;bottom:calc(17px + env(safe-area-inset-bottom,0px));width:164px}
+ /* Mobile: keep the quality picker on the right, raised above the site's bottom ad control. */
+ .graphics-quality-picker{position:fixed;top:auto;right:max(12px,env(safe-area-inset-right,0px));left:auto;bottom:calc(88px + env(safe-area-inset-bottom,0px));width:164px}
  .graphics-quality-toggle{padding:8px 9px;gap:7px;border-radius:10px}
  .graphics-quality-toggle span{font-size:8px;letter-spacing:.09em}
  .graphics-quality-toggle strong{font-size:10px}
  .graphics-quality-options{top:auto;bottom:calc(100% + 7px);padding:7px}
  .graphics-quality-option{padding:8px 7px}
 }
-@media(max-height:520px) and (max-width:600px){.graphics-quality-picker{bottom:8px}.graphics-quality-toggle{padding:6px 8px}}
+@media(max-height:520px) and (max-width:600px){.graphics-quality-picker{bottom:calc(54px + env(safe-area-inset-bottom,0px))}.graphics-quality-toggle{padding:6px 8px}}
 </style>
 
 <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
