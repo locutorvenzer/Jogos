@@ -1551,6 +1551,7 @@ void loop() {
   const keys = { a:false, d:false, ArrowLeft:false, ArrowRight:false };
   let arduinoP1Val=.5, arduinoP2Val=.5;
   let audioCtx=null, masterGain=null, compressor=null;
+  let lastWallSoundAt=-Infinity; // Protege o áudio móvel contra impactos laterais repetidos no mesmo instante.
   // Ganhos independentes para música e efeitos sonoros.
   let musicVolume=1.2,effectsVolume=1;
   let musicBusGain=null,sfxBusGain=null;
@@ -1649,8 +1650,14 @@ void loop() {
     const outputBus=bus||(sfxBusGain||masterGain);
     envelope.connect(panner);panner.connect(outputBus||masterGain);
     const reverbBus=isMusicBus?audioMusicReverbBus:audioReverbBus;
-    if(send>0&&reverbBus){const sendGain=audioCtx.createGain();sendGain.gain.value=send;panner.connect(sendGain);sendGain.connect(reverbBus);}
-    return panner;
+    let sendGain=null;
+    if(send>0&&reverbBus){sendGain=audioCtx.createGain();sendGain.gain.value=send;panner.connect(sendGain);sendGain.connect(reverbBus);}
+    // Os efeitos são curtos; desconectar os nós evita acumular conexões no Safari/iOS.
+    return ()=>{
+      try{envelope.disconnect();}catch(e){}
+      try{panner.disconnect();}catch(e){}
+      if(sendGain){try{sendGain.disconnect();}catch(e){}}
+    };
   }
 
   function softTone(freq,duration,volume,when=null,options={},bus=null){
@@ -1678,7 +1685,12 @@ void loop() {
       env.gain.exponentialRampToValueAtTime(.0001,t+duration);
     }
     osc.connect(filter);filter.connect(env);
-    routeVoice(osc,env,bus||masterGain,options.pan||0,options.send===undefined?.05:options.send);
+    const cleanupVoice=routeVoice(osc,env,bus||masterGain,options.pan||0,options.send===undefined?.05:options.send);
+    osc.onended=()=>{
+      try{osc.disconnect();}catch(e){}
+      try{filter.disconnect();}catch(e){}
+      cleanupVoice();
+    };
     osc.start(t);osc.stop(t+duration+.035);
   }
 
@@ -1693,7 +1705,12 @@ void loop() {
     env.gain.setValueAtTime(.0001,t);env.gain.exponentialRampToValueAtTime(Math.max(.00015,volume),t+attack);
     env.gain.exponentialRampToValueAtTime(.0001,t+duration);
     source.connect(filter);filter.connect(env);
-    routeVoice(source,env,bus||masterGain,options.pan||0,options.send===undefined?.035:options.send);
+    const cleanupVoice=routeVoice(source,env,bus||masterGain,options.pan||0,options.send===undefined?.035:options.send);
+    source.onended=()=>{
+      try{source.disconnect();}catch(e){}
+      try{filter.disconnect();}catch(e){}
+      cleanupVoice();
+    };
     source.start(t,0,Math.min(duration,audioNoiseBuffer.duration));source.stop(t+duration+.025);
   }
 
@@ -1809,6 +1826,11 @@ void loop() {
 
   function playSound(type,speedFactor=1,powerId=null,side=0){
     if(!audioCtx||audioMuted||!masterGain)return;
+    if(type==='wall'){
+      const now=audioCtx.currentTime;
+      if(now-lastWallSoundAt<.10)return;
+      lastWallSoundAt=now;
+    }
     const pan=side===1?-.24:side===2?.24:0;
     const speed=clamp(speedFactor,.7,2.4);
     if(type==='ui'){
@@ -3061,8 +3083,12 @@ void loop() {
     b.position.y=r+(gameState.activePower&&gameState.activePower.id==='ghost'?.02*Math.sin(elapsed*10):0);
 
     const wallBound=GAME_CONFIG.tableWidth/2-r;
-    if(b.position.x<=-wallBound||b.position.x>=wallBound){
-      const direction=b.position.x<0?1:-1;b.position.x=clamp(b.position.x,-wallBound,wallBound);
+    // A colisão lateral só ocorre quando a bola ainda está se deslocando para fora.
+    // Se ela já estiver encostada e parada/tangencial, não repetir impacto a cada frame.
+    const hitLeftWall=b.position.x<=-wallBound&&vel.x<0;
+    const hitRightWall=b.position.x>=wallBound&&vel.x>0;
+    if(hitLeftWall||hitRightWall){
+      const direction=hitLeftWall?1:-1;b.position.x=clamp(b.position.x,-wallBound,wallBound);
       vel.x=Math.abs(vel.x)*direction;
       if(gameState.activePower&&gameState.activePower.id==='gravity'){
         const currentSpeed=Math.max(.001,vel.length());
@@ -3082,6 +3108,9 @@ void loop() {
       const color=gameState.activePower?gameState.activePower.color:0x45dcff;
       hitImpact(b.position,color,ballPowerId(),'wall');
       if(gameState.activePower&&gameState.activePower.id==='zap')spawnZapWallFlash(b.position);
+    }else{
+      // Mantém a bola dentro da mesa sem gerar um novo som se estiver indo para dentro.
+      b.position.x=clamp(b.position.x,-wallBound,wallBound);
     }
 
     const p1Plane=paddle1.position.z-GAME_CONFIG.paddleDepth/2;
