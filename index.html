@@ -1656,7 +1656,8 @@ void loop() {
   // Ganhos independentes para música e efeitos sonoros.
   let musicVolume=1.2,effectsVolume=1;
   let musicBusGain=null,sfxBusGain=null;
-  let menuMusicGain=null,menuMusicTimer=null,menuMusicRequested=false,menuMusicStep=0,menuMusicNextTime=0;
+  let menuMusicGain=null,menuMusicRequested=false,menuMusicStep=0,menuMusicNextTime=0;
+  let menuAudioElement=null,menuAudioSource=null,menuMusicPlaying=false,menuAudioPlayToken=0,menuAudioStopToken=0;
   let gameMusicGain=null,gameMusicTimer=null,gameMusicRequested=false,gameMusicStep=0,gameMusicNextTime=0;
   let scene,camera,renderer,tableGroup,tableMesh,paddle1,paddle2,ball,lightP1,lightP2,ballLight,impactLight;
   // Referências opcionais do cenário; declaradas para evitar ReferenceError em modo strict.
@@ -1681,9 +1682,9 @@ void loop() {
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const rand=(min,max)=>min+Math.random()*(max-min);
 
-  /* Trilha principal em estilo festival EDM / big-room, criada proceduralmente
-     com Web Audio API. Composição original, sem samples ou músicas de terceiros. */
-  /* ------------------------- ÁUDIO FESTIVAL EDM ------------------------- */
+  /* Música principal do menu carregada de assets/audio/menu-principal.mp3.
+     A trilha de gameplay e os efeitos continuam sintetizados pela Web Audio API. */
+  /* ------------------------- ÁUDIO DO VENZER ------------------------- */
   const FESTIVAL_MENU_CHORDS = [
     [57,60,64,67,71],  // Am9
     [53,57,60,64,69],  // Fmaj9
@@ -2013,21 +2014,90 @@ void loop() {
     if(!gameMusicGain){gameMusicGain=audioCtx.createGain();gameMusicGain.gain.value=0;gameMusicGain.connect(musicBusGain||masterGain);}
     return true;
   }
+  function ensureMenuAudioSource(){
+    if(!audioCtx||!ensureMenuMusicBus())return false;
+    if(!menuAudioElement){
+      menuAudioElement=new Audio();
+      menuAudioElement.src='assets/audio/menu-principal.mp3';
+      menuAudioElement.preload='auto';
+      menuAudioElement.loop=true;
+      menuAudioElement.volume=1;
+      menuAudioElement.setAttribute('playsinline','');
+      menuAudioElement.setAttribute('webkit-playsinline','');
+    }
+    if(!menuAudioSource){
+      try{
+        menuAudioSource=audioCtx.createMediaElementSource(menuAudioElement);
+        menuAudioSource.connect(menuMusicGain);
+      }catch(error){
+        console.error('Não foi possível conectar a música do menu ao áudio principal:',error);
+        return false;
+      }
+    }
+    return true;
+  }
+  function fadeMenuMusicIn(token){
+    if(token!==menuAudioPlayToken||!menuMusicRequested||!menuMusicPlaying||!audioCtx||audioCtx.state!=='running'||!menuMusicGain)return;
+    const now=audioCtx.currentTime;
+    menuMusicGain.gain.cancelScheduledValues(now);
+    menuMusicGain.gain.setValueAtTime(Math.max(0,menuMusicGain.gain.value),now);
+    menuMusicGain.gain.linearRampToValueAtTime(1.18,now+.9);
+  }
   function beginMenuMusicPlayback(){
-    if(!menuMusicRequested||!audioCtx||audioCtx.state!=='running'||menuMusicTimer!==null||audioMuted)return;
-    if(!ensureMenuMusicBus())return;
-    const now=audioCtx.currentTime;menuMusicGain.gain.cancelScheduledValues(now);
-    menuMusicGain.gain.setValueAtTime(menuMusicGain.gain.value,now);menuMusicGain.gain.linearRampToValueAtTime(1.18,now+1.35);
-    menuMusicStep=0;menuMusicNextTime=now+.08;menuMusicTimer=window.setInterval(pumpMenuMusic,45);pumpMenuMusic();
+    if(!menuMusicRequested||!audioCtx||menuMusicPlaying||audioMuted)return;
+    if(!ensureMenuAudioSource())return;
+    const token=++menuAudioPlayToken;
+    menuAudioStopToken++;
+    menuMusicPlaying=true;
+    const now=audioCtx.currentTime;
+    menuMusicGain.gain.cancelScheduledValues(now);
+    menuMusicGain.gain.setValueAtTime(0,now);
+    let playPromise;
+    try{
+      // play() é chamado diretamente no gesto do usuário quando disponível,
+      // requisito importante para Safari/iOS e navegadores móveis.
+      playPromise=menuAudioElement.play();
+    }catch(error){
+      menuMusicPlaying=false;
+      return;
+    }
+    if(playPromise&&typeof playPromise.catch==='function'){
+      playPromise.catch(error=>{
+        if(token!==menuAudioPlayToken)return;
+        menuMusicPlaying=false;
+        if(menuMusicRequested&&!audioMuted)console.warn('A reprodução da música do menu aguarda uma interação do usuário.',error);
+      });
+    }
+    if(audioCtx.state==='running')fadeMenuMusicIn(token);
+    else audioCtx.resume().then(()=>fadeMenuMusicIn(token)).catch(()=>{});
   }
   function startMenuMusic(){
-    if(audioMuted)return;menuMusicRequested=true;initAudio();if(!audioCtx)return;
-    if(audioCtx.state==='running'){beginMenuMusicPlayback();return;}
-    audioCtx.resume().then(()=>{if(menuMusicRequested)beginMenuMusicPlayback();}).catch(()=>{});
+    if(audioMuted)return;
+    menuMusicRequested=true;
+    initAudio();
+    if(!audioCtx)return;
+    beginMenuMusicPlayback();
+    if(audioCtx.state!=='running')audioCtx.resume().then(()=>{
+      if(menuMusicRequested&&!menuMusicPlaying)beginMenuMusicPlayback();
+      else if(menuMusicPlaying)fadeMenuMusicIn(menuAudioPlayToken);
+    }).catch(()=>{});
   }
   function stopMenuMusic(){
-    menuMusicRequested=false;if(menuMusicTimer!==null){clearInterval(menuMusicTimer);menuMusicTimer=null;}
-    if(menuMusicGain&&audioCtx){const now=audioCtx.currentTime;menuMusicGain.gain.cancelScheduledValues(now);menuMusicGain.gain.setValueAtTime(menuMusicGain.gain.value,now);menuMusicGain.gain.linearRampToValueAtTime(0,now+.55);}
+    menuMusicRequested=false;
+    menuMusicPlaying=false;
+    const stopToken=++menuAudioStopToken;
+    menuAudioPlayToken++;
+    if(menuMusicGain&&audioCtx){
+      const now=audioCtx.currentTime;
+      menuMusicGain.gain.cancelScheduledValues(now);
+      menuMusicGain.gain.setValueAtTime(menuMusicGain.gain.value,now);
+      menuMusicGain.gain.linearRampToValueAtTime(0,now+.48);
+    }
+    const finishStop=()=>{
+      if(stopToken!==menuAudioStopToken||menuMusicRequested||!menuAudioElement)return;
+      try{menuAudioElement.pause();menuAudioElement.currentTime=0;}catch(error){}
+    };
+    window.setTimeout(finishStop,520);
   }
   function beginGameMusicPlayback(){
     if(!gameMusicRequested||!audioCtx||audioCtx.state!=='running'||gameMusicTimer!==null||audioMuted)return;
@@ -2140,7 +2210,13 @@ void loop() {
     const menu=$('main-menu');
     const menuVisible=menu&&!menu.classList.contains('opacity-0')&&!menu.classList.contains('pointer-events-none');
     if(audioMuted)return;
-    if(menuVisible&&!menuMusicRequested&&!gameMusicRequested)startMenuMusic();
+    if(menuVisible&&!gameMusicRequested){
+      menuMusicRequested=true;
+      if(!audioCtx)initAudio();
+      // Tenta iniciar o elemento de áudio ainda dentro do gesto (pointer/touch/click),
+      // para cumprir as políticas de autoplay do iOS e Android.
+      if(audioCtx&&!menuMusicPlaying)beginMenuMusicPlayback();
+    }
     if(!audioCtx)initAudio();
     if(!audioCtx)return;
     const continuePlayback=()=>{
@@ -2149,7 +2225,8 @@ void loop() {
       const nowMenu=!!(currentMenu&&!currentMenu.classList.contains('opacity-0')&&!currentMenu.classList.contains('pointer-events-none'));
       if(nowMenu){
         if(!menuMusicRequested&&!gameMusicRequested)startMenuMusic();
-        else if(menuMusicRequested&&menuMusicTimer===null)beginMenuMusicPlayback();
+        else if(menuMusicRequested&&!menuMusicPlaying)beginMenuMusicPlayback();
+        else if(menuMusicPlaying)fadeMenuMusicIn(menuAudioPlayToken);
       }else if(gameMusicRequested&&gameMusicTimer===null){beginGameMusicPlayback();}
     };
     if(audioCtx.state!=='running'){
