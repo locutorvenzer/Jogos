@@ -1657,12 +1657,12 @@ void loop() {
   let musicVolume=1.2,effectsVolume=1;
   let musicBusGain=null,sfxBusGain=null;
   let menuMusicGain=null,menuMusicRequested=false,menuMusicStep=0,menuMusicNextTime=0;
-  let menuAudioElement=null,menuAudioSource=null,menuMusicPlaying=false,menuAudioPlayToken=0,menuAudioStopToken=0;
+  let menuAudioElement=null,menuAudioSource=null,menuMusicPlaying=false,menuAudioPlayToken=0,menuAudioStopToken=0,menuFadeTimer=null;
   let gameMusicGain=null,gameMusicTimer=null,gameMusicRequested=false,gameMusicStep=0,gameMusicNextTime=0;
   let scene,camera,renderer,tableGroup,tableMesh,paddle1,paddle2,ball,lightP1,lightP2,ballLight,impactLight;
   // Referências opcionais do cenário; declaradas para evitar ReferenceError em modo strict.
   let arenaBackdrop=null, starfield=null;
-  let extraBalls=[];
+  let extraBalls=[],multiballGeometry=null;
   let particles=[], lightningBolts=[], fireStamps=[];
   let particleTexture=null, fireStampTexture=null, rubberTexture=null;
   let woodMaps=null, floorMaps=null, tableSurfaceMaps=null, ballSurfaceMaps=null, liquidMetalMaps=null, basketballMaps=null;
@@ -1681,6 +1681,10 @@ void loop() {
   const $ = id => document.getElementById(id);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const rand=(min,max)=>min+Math.random()*(max-min);
+  // Limites próprios para celulares, independentes da qualidade gráfica escolhida.
+  const VENZER_MOBILE_MODE = (window.matchMedia && window.matchMedia('(max-width: 900px), (pointer: coarse)').matches) || (navigator.maxTouchPoints||0)>1;
+  const VENZER_PARTICLE_LIMIT = VENZER_MOBILE_MODE ? 72 : 180;
+  const VENZER_LIGHTNING_LIMIT = VENZER_MOBILE_MODE ? 8 : 28;
 
   /* Música principal do menu carregada de assets/audio/menu-principal.mp3.
      A trilha de gameplay e os efeitos continuam sintetizados pela Web Audio API. */
@@ -1725,18 +1729,20 @@ void loop() {
       musicBusGain=audioCtx.createGain();musicBusGain.gain.value=musicVolume;musicBusGain.connect(masterGain);
       sfxBusGain=audioCtx.createGain();sfxBusGain.gain.value=effectsVolume;sfxBusGain.connect(masterGain);
 
-      // Reverb separado por categoria para que o volume zero realmente silencie cada canal.
-      const reverbImpulse=makeRoomImpulse(audioCtx,1.45,2.35);
-      audioReverbBus=audioCtx.createGain();audioReverbBus.gain.value=.19;
-      const convolver=audioCtx.createConvolver();convolver.buffer=reverbImpulse;
-      audioReverbReturn=audioCtx.createGain();audioReverbReturn.gain.value=.22;
-      audioReverbBus.connect(convolver);convolver.connect(audioReverbReturn);audioReverbReturn.connect(sfxBusGain);
-
-      audioMusicReverbBus=audioCtx.createGain();audioMusicReverbBus.gain.value=.19;
-      const musicConvolver=audioCtx.createConvolver();musicConvolver.buffer=reverbImpulse;
-      audioMusicReverbReturn=audioCtx.createGain();audioMusicReverbReturn.gain.value=.22;
-      audioMusicReverbBus.connect(musicConvolver);musicConvolver.connect(audioMusicReverbReturn);audioMusicReverbReturn.connect(musicBusGain);
-      audioNoiseBuffer=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate);
+      // Em celulares, desativa convolução/reverb: reduz custo contínuo do DSP.
+      // Os efeitos secos continuam funcionando; desktop mantém o reverb original.
+      if(!VENZER_MOBILE_MODE){
+        const reverbImpulse=makeRoomImpulse(audioCtx,1.1,2.1);
+        audioReverbBus=audioCtx.createGain();audioReverbBus.gain.value=.14;
+        const convolver=audioCtx.createConvolver();convolver.buffer=reverbImpulse;
+        audioReverbReturn=audioCtx.createGain();audioReverbReturn.gain.value=.18;
+        audioReverbBus.connect(convolver);convolver.connect(audioReverbReturn);audioReverbReturn.connect(sfxBusGain);
+        audioMusicReverbBus=audioCtx.createGain();audioMusicReverbBus.gain.value=.14;
+        const musicConvolver=audioCtx.createConvolver();musicConvolver.buffer=reverbImpulse;
+        audioMusicReverbReturn=audioCtx.createGain();audioMusicReverbReturn.gain.value=.18;
+        audioMusicReverbBus.connect(musicConvolver);musicConvolver.connect(audioMusicReverbReturn);audioMusicReverbReturn.connect(musicBusGain);
+      }
+      audioNoiseBuffer=audioCtx.createBuffer(1,audioCtx.sampleRate*(VENZER_MOBILE_MODE?1:2),audioCtx.sampleRate);
       const noise=audioNoiseBuffer.getChannelData(0);
       let last=0;
       for(let i=0;i<noise.length;i++){
@@ -1772,7 +1778,7 @@ void loop() {
 
   function softTone(freq,duration,volume,when=null,options={},bus=null){
     if(!audioCtx||audioMuted||!masterGain)return;
-    if(!bus&&activeSfxVoices>=14)return;
+    if(!bus&&activeSfxVoices>=(VENZER_MOBILE_MODE?8:14))return;
     const t=when===null?audioCtx.currentTime:when;
     const osc=audioCtx.createOscillator();
     const filter=audioCtx.createBiquadFilter();
@@ -1807,7 +1813,7 @@ void loop() {
 
   function softNoise(duration,volume,cutoff=1500,when=null,options={},bus=null){
     if(!audioCtx||audioMuted||!audioNoiseBuffer)return;
-    if(!bus&&activeSfxVoices>=14)return;
+    if(!bus&&activeSfxVoices>=(VENZER_MOBILE_MODE?8:14))return;
     const t=when===null?audioCtx.currentTime:when;
     const source=audioCtx.createBufferSource();source.buffer=audioNoiseBuffer;
     const filter=audioCtx.createBiquadFilter();filter.type=options.filterType||'lowpass';
@@ -2015,89 +2021,68 @@ void loop() {
     return true;
   }
   function ensureMenuAudioSource(){
-    if(!audioCtx||!ensureMenuMusicBus())return false;
+    // A música do menu fica em HTMLAudioElement independente do AudioContext.
+    // Assim, um problema no DSP dos efeitos do PONG não derruba a trilha principal.
     if(!menuAudioElement){
       menuAudioElement=new Audio();
       menuAudioElement.src='assets/audio/menu-principal.mp3';
       menuAudioElement.preload='auto';
       menuAudioElement.loop=true;
-      menuAudioElement.volume=1;
+      menuAudioElement.volume=clamp(musicVolume/1.2,0,1);
+      menuAudioElement.muted=audioMuted;
       menuAudioElement.setAttribute('playsinline','');
       menuAudioElement.setAttribute('webkit-playsinline','');
-    }
-    if(!menuAudioSource){
-      try{
-        menuAudioSource=audioCtx.createMediaElementSource(menuAudioElement);
-        menuAudioSource.connect(menuMusicGain);
-      }catch(error){
-        console.error('Não foi possível conectar a música do menu ao áudio principal:',error);
-        return false;
-      }
     }
     return true;
   }
   function fadeMenuMusicIn(token){
-    if(token!==menuAudioPlayToken||!menuMusicRequested||!menuMusicPlaying||!audioCtx||audioCtx.state!=='running'||!menuMusicGain)return;
-    const now=audioCtx.currentTime;
-    menuMusicGain.gain.cancelScheduledValues(now);
-    menuMusicGain.gain.setValueAtTime(Math.max(0,menuMusicGain.gain.value),now);
-    menuMusicGain.gain.linearRampToValueAtTime(1.18,now+.9);
+    if(token!==menuAudioPlayToken||!menuMusicRequested||!menuMusicPlaying||!menuAudioElement)return;
+    menuAudioElement.muted=audioMuted;
+    menuAudioElement.volume=clamp(musicVolume/1.2,0,1);
   }
   function beginMenuMusicPlayback(){
-    if(!menuMusicRequested||!audioCtx||menuMusicPlaying||audioMuted)return;
+    if(!menuMusicRequested||menuMusicPlaying||audioMuted)return;
     if(!ensureMenuAudioSource())return;
     const token=++menuAudioPlayToken;
     menuAudioStopToken++;
+    if(menuFadeTimer!==null){clearInterval(menuFadeTimer);menuFadeTimer=null;}
     menuMusicPlaying=true;
-    const now=audioCtx.currentTime;
-    menuMusicGain.gain.cancelScheduledValues(now);
-    menuMusicGain.gain.setValueAtTime(0,now);
+    menuAudioElement.muted=false;
+    menuAudioElement.volume=clamp(musicVolume/1.2,0,1);
     let playPromise;
     try{
-      // play() é chamado diretamente no gesto do usuário quando disponível,
-      // requisito importante para Safari/iOS e navegadores móveis.
+      // Mantém play() síncrono dentro do gesto do usuário para Safari/iOS.
       playPromise=menuAudioElement.play();
-    }catch(error){
-      menuMusicPlaying=false;
-      return;
-    }
+    }catch(error){menuMusicPlaying=false;return;}
     if(playPromise&&typeof playPromise.catch==='function'){
       playPromise.catch(error=>{
         if(token!==menuAudioPlayToken)return;
         menuMusicPlaying=false;
-        if(menuMusicRequested&&!audioMuted)console.warn('A reprodução da música do menu aguarda uma interação do usuário.',error);
+        if(menuMusicRequested&&!audioMuted)console.warn('A música do menu aguarda uma interação do usuário.',error);
       });
     }
-    if(audioCtx.state==='running')fadeMenuMusicIn(token);
-    else audioCtx.resume().then(()=>fadeMenuMusicIn(token)).catch(()=>{});
   }
   function startMenuMusic(){
     if(audioMuted)return;
     menuMusicRequested=true;
-    initAudio();
-    if(!audioCtx)return;
+    ensureMenuAudioSource();
     beginMenuMusicPlayback();
-    if(audioCtx.state!=='running')audioCtx.resume().then(()=>{
-      if(menuMusicRequested&&!menuMusicPlaying)beginMenuMusicPlayback();
-      else if(menuMusicPlaying)fadeMenuMusicIn(menuAudioPlayToken);
-    }).catch(()=>{});
   }
   function stopMenuMusic(){
     menuMusicRequested=false;
     menuMusicPlaying=false;
     const stopToken=++menuAudioStopToken;
     menuAudioPlayToken++;
-    if(menuMusicGain&&audioCtx){
-      const now=audioCtx.currentTime;
-      menuMusicGain.gain.cancelScheduledValues(now);
-      menuMusicGain.gain.setValueAtTime(menuMusicGain.gain.value,now);
-      menuMusicGain.gain.linearRampToValueAtTime(0,now+.48);
-    }
-    const finishStop=()=>{
-      if(stopToken!==menuAudioStopToken||menuMusicRequested||!menuAudioElement)return;
-      try{menuAudioElement.pause();menuAudioElement.currentTime=0;}catch(error){}
-    };
-    window.setTimeout(finishStop,520);
+    if(!menuAudioElement)return;
+    if(menuFadeTimer!==null){clearInterval(menuFadeTimer);menuFadeTimer=null;}
+    const startVolume=menuAudioElement.volume;
+    const started=performance.now();
+    menuFadeTimer=window.setInterval(()=>{
+      if(stopToken!==menuAudioStopToken||menuMusicRequested){clearInterval(menuFadeTimer);menuFadeTimer=null;return;}
+      const k=clamp(1-(performance.now()-started)/260,0,1);
+      try{menuAudioElement.volume=startVolume*k;}catch(e){}
+      if(k<=0){clearInterval(menuFadeTimer);menuFadeTimer=null;try{menuAudioElement.pause();menuAudioElement.currentTime=0;}catch(e){}}
+    },30);
   }
   function beginGameMusicPlayback(){
     if(!gameMusicRequested||!audioCtx||audioCtx.state!=='running'||gameMusicTimer!==null||audioMuted)return;
@@ -2128,7 +2113,7 @@ void loop() {
     if(!audioCtx||audioMuted||!masterGain)return;
     if(type==='wall'){
       const now=audioCtx.currentTime;
-      const wallCooldown=powerId==='zap'?.28:.14;
+      const wallCooldown=powerId==='zap'?(VENZER_MOBILE_MODE?.55:.32):(VENZER_MOBILE_MODE?.22:.14);
       if(now-lastWallSoundAt<wallCooldown)return;
       lastWallSoundAt=now;
     }
@@ -2194,11 +2179,13 @@ void loop() {
     if(label)label.textContent=audioMuted?'MÚSICA E EFEITOS · DESLIGADOS':'MÚSICA E EFEITOS · LIGADOS';
     const button=$('btn-audio-toggle');
     if(button){const icon=button.querySelector('i');if(icon)icon.className=audioMuted?'fa-solid fa-volume-xmark mr-2':'fa-solid fa-volume-high mr-2';}
-    if(!audioCtx)return;
-    const now=audioCtx.currentTime;masterGain.gain.cancelScheduledValues(now);masterGain.gain.setValueAtTime(masterGain.gain.value,now);masterGain.gain.linearRampToValueAtTime(audioMuted?0:.72,now+.25);
+    if(menuAudioElement)menuAudioElement.muted=audioMuted;
+    if(audioCtx){
+      const now=audioCtx.currentTime;masterGain.gain.cancelScheduledValues(now);masterGain.gain.setValueAtTime(masterGain.gain.value,now);masterGain.gain.linearRampToValueAtTime(audioMuted?0:.72,now+.25);
+    }
     if(audioMuted){stopMenuMusic();stopGameMusic();}
     else{
-      audioCtx.resume().catch(()=>{});
+      if(audioCtx)audioCtx.resume().catch(()=>{});
       const menu=$('main-menu');const visible=menu&&!menu.classList.contains('opacity-0')&&!menu.classList.contains('pointer-events-none');
       if(visible)startMenuMusic();else startGameMusic();
     }
@@ -2212,10 +2199,8 @@ void loop() {
     if(audioMuted)return;
     if(menuVisible&&!gameMusicRequested){
       menuMusicRequested=true;
-      if(!audioCtx)initAudio();
-      // Tenta iniciar o elemento de áudio ainda dentro do gesto (pointer/touch/click),
-      // para cumprir as políticas de autoplay do iOS e Android.
-      if(audioCtx&&!menuMusicPlaying)beginMenuMusicPlayback();
+      // Tenta iniciar o MP3 independente ainda dentro do gesto do usuário.
+      if(!menuMusicPlaying)beginMenuMusicPlayback();
     }
     if(!audioCtx)initAudio();
     if(!audioCtx)return;
@@ -2941,7 +2926,7 @@ void loop() {
 
   function emitParticle(pos,color,size=.45,life=.42,velocity=null,opacity=.95){
     if(!particleTexture||!scene)return;
-    if(particles.length>240){const old=particles.shift();scene.remove(old.sprite);old.sprite.material.dispose();}
+    while(particles.length>=VENZER_PARTICLE_LIMIT){const old=particles.shift();scene.remove(old.sprite);old.sprite.material.dispose();}
     const mat=new THREE.SpriteMaterial({map:particleTexture,color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false});
     const sprite=new THREE.Sprite(mat);sprite.position.copy(pos);sprite.scale.set(size,size,1);scene.add(sprite);
     particles.push({sprite,life,maxLife:life,velocity:velocity?velocity.clone():new THREE.Vector3(rand(-.7,.7),rand(.15,1),rand(-.7,.7)),size,opacity});
@@ -2975,20 +2960,26 @@ void loop() {
     cameraShake=Math.max(cameraShake,.19);
     impactLight.position.set(pos.x*.88,1.05,pos.z);impactLight.color.setHex(0xc9fbff);impactLight.intensity=18;impactPulse=.22;
     const inward=pos.x>0?-1:1;
-    for(let i=0;i<5;i++){
+    const boltCount=VENZER_MOBILE_MODE?2:5;
+    for(let i=0;i<boltCount;i++){
+      while(lightningBolts.length>=VENZER_LIGHTNING_LIMIT){const old=lightningBolts.shift();scene.remove(old.line);old.line.geometry.dispose();old.line.material.dispose();}
       const points=[pos.clone().add(new THREE.Vector3(0,rand(.1,.6),rand(-.15,.15)))];
       let q=points[0].clone();
-      for(let j=0;j<5;j++){q=q.clone().add(new THREE.Vector3(inward*rand(.25,.75),rand(-.5,.5),rand(-.55,.55)));points.push(q.clone());}
+      const segments=VENZER_MOBILE_MODE?3:5;
+      for(let j=0;j<segments;j++){q=q.clone().add(new THREE.Vector3(inward*rand(.25,.75),rand(-.5,.5),rand(-.55,.55)));points.push(q.clone());}
       const geo=new THREE.BufferGeometry().setFromPoints(points);
       const mat=new THREE.LineBasicMaterial({color:i%2?0x71eaff:0xffffff,transparent:true,opacity:1,blending:THREE.AdditiveBlending});
-      const line=new THREE.Line(geo,mat);scene.add(line);lightningBolts.push({line,life:.18,maxLife:.18});
+      const line=new THREE.Line(geo,mat);scene.add(line);lightningBolts.push({line,life:.14,maxLife:.14});
     }
-    burst(pos,0xc8fbff,20,1);
+    burst(pos,0xc8fbff,VENZER_MOBILE_MODE?5:20,VENZER_MOBILE_MODE?.62:1);
   }
 
   function spawnLightning(pos,color=0x7cf8ff,scale=1){
+    while(lightningBolts.length>=VENZER_LIGHTNING_LIMIT){
+      const old=lightningBolts.shift();scene.remove(old.line);old.line.geometry.dispose();old.line.material.dispose();
+    }
     const points=[];let p=pos.clone();points.push(p.clone());
-    const segments=6;
+    const segments=VENZER_MOBILE_MODE?3:6;
     for(let i=1;i<segments;i++){p=p.clone().add(new THREE.Vector3(rand(-.65,.65)*scale,rand(-.6,.6)*scale,rand(-.65,.65)*scale));points.push(p.clone());}
     points.push(pos.clone().add(new THREE.Vector3(rand(-.45,.45),rand(-.45,.45),rand(-.45,.45)).multiplyScalar(scale)));
     const geo=new THREE.BufferGeometry().setFromPoints(points);
@@ -3191,9 +3182,15 @@ void loop() {
     const powerDisp=$('power-active-display');powerDisp.textContent=`PODER: ${p.name.toUpperCase()}`;powerDisp.classList.remove('hidden');
     if(p.id==='multiball'){
       const trajectories=[new THREE.Vector3(.36,0,.93),new THREE.Vector3(-.48,0,-.87)];
+      if(VENZER_MOBILE_MODE&&!multiballGeometry)multiballGeometry=new THREE.SphereGeometry(GAME_CONFIG.ballRadius,24,16);
+      const splitGeometry=VENZER_MOBILE_MODE?multiballGeometry:ball.geometry;
       trajectories.forEach((dir,i)=>{
-        const eb=ball.clone(true);eb.material=ball.material.clone();
-        eb.position.set((i===0?-.72:.72),ballRadius(eb),i===0?-.55:.55);
+        // Não clona PointLight, halo e demais filhos da bola principal.
+        // No celular usa esfera de baixa contagem de polígonos, compartilhada pelas duas bolas.
+        const eb=new THREE.Mesh(splitGeometry,ball.material.clone());
+        eb.castShadow=!VENZER_MOBILE_MODE&&VENZER_PERF.tier>=1;
+        eb.receiveShadow=false;
+        eb.position.set((i===0?-.72:.72),GAME_CONFIG.ballRadius,i===0?-.55:.55);
         eb.userData.baseSpeed=GAME_CONFIG.initialBallSpeed;eb.userData.powerId='multiball';eb.userData.speedFactor=1;
         eb.vel=dir.normalize().multiplyScalar(eb.userData.baseSpeed);
         scene.add(eb);extraBalls.push(eb);
@@ -3278,7 +3275,9 @@ void loop() {
       ballLight.intensity=3.2+Math.sin(elapsed*20)*.8;
     }
     if(id==='zap'){
-      zapClock+=dt;if(zapClock>.065){zapClock=0;spawnLightning(ball.position,Math.random()>.3?0x8ffcff:0xfff27b,rand(.6,1.15));}
+      zapClock+=dt;
+      const zapInterval=VENZER_MOBILE_MODE?.18:.095;
+      if(zapClock>zapInterval){zapClock=0;spawnLightning(ball.position,Math.random()>.3?0x8ffcff:0xfff27b,rand(.6,1.15));}
     }
     if(id==='ghost'){
       ghostClock+=dt;if(ghostClock>.055){ghostClock=0;emitParticle(ball.position,0xb7f8ff,rand(.28,.48),.3,new THREE.Vector3(rand(-.22,.22),rand(.08,.28),rand(-.22,.22)),.38);}
@@ -3368,11 +3367,16 @@ void loop() {
     const mult=(actual/GAME_CONFIG.initialBallSpeed).toFixed(1);
     $('speed-display').textContent=`VELOCIDADE: ${mult}x`;
   }
-  function hitImpact(pos,color,powerId,side){
-    burst(pos,color,powerId==='iron'?22:powerId==='zap'?18:12,powerId==='iron'?1.3:1);
-    impactLight.position.copy(pos);impactLight.color.setHex(color);impactLight.intensity=powerId==='zap'?5.0:powerId==='iron'?4.2:2.5;impactPulse=.18;
-    if(powerId==='iron'){cameraShake=Math.max(cameraShake,.13);}
-    if(powerId==='zap'){spawnLightning(pos,0x9ffcff,1.4);cameraShake=Math.max(cameraShake,.06);}
+  function hitImpact(pos,color,powerId,side,lightweight=false){
+    // As duas bolas extras do Tri-Split usam impacto leve para não multiplicar
+    // sprites, geometrias e luzes no mesmo quadro em celulares.
+    if(!lightweight){
+      const count=powerId==='iron'?22:powerId==='zap'?(VENZER_MOBILE_MODE?6:18):(VENZER_MOBILE_MODE?5:12);
+      burst(pos,color,count,powerId==='iron'?1.3:VENZER_MOBILE_MODE?.68:1);
+    }
+    impactLight.position.copy(pos);impactLight.color.setHex(color);impactLight.intensity=lightweight?1.2:powerId==='zap'?5.0:powerId==='iron'?4.2:2.5;impactPulse=lightweight?.08:.18;
+    if(!lightweight&&powerId==='iron'){cameraShake=Math.max(cameraShake,.13);}
+    if(!lightweight&&powerId==='zap'&&side!=='wall'){spawnLightning(pos,0x9ffcff,VENZER_MOBILE_MODE?.8:1.4);cameraShake=Math.max(cameraShake,.06);}
     playSound(side==='wall'?'wall':'paddle',gameState.currentBallSpeed/GAME_CONFIG.initialBallSpeed,powerId,side==='p1'?1:side==='p2'?2:0);
   }
 
@@ -3453,7 +3457,7 @@ void loop() {
         burst(b.position,0x7effb0,10,.6);
       }
       const color=gameState.activePower?gameState.activePower.color:0x45dcff;
-      hitImpact(b.position,color,ballPowerId(),'wall');
+      hitImpact(b.position,color,ballPowerId(),'wall',!isMain);
       if(gameState.activePower&&gameState.activePower.id==='zap')spawnZapWallFlash(b.position);
     }else{
       // Mantém a bola dentro da mesa sem gerar um novo som se estiver indo para dentro.
@@ -3484,7 +3488,7 @@ void loop() {
         const remaining=step*(1-p1Hit),nextX=b.position.x+vel.x*remaining;
         if(Math.abs(nextX)<=wallBound)b.position.x=nextX;
         b.position.z+=vel.z*remaining;
-        hitImpact(impactPosition,0x00eaff,ballPowerId(),'p1');
+        hitImpact(impactPosition,0x00eaff,ballPowerId(),'p1',!isMain);
         paddle1.rotation.z=0;
       }
     }
@@ -3508,7 +3512,7 @@ void loop() {
         const remaining=step*(1-p2Hit),nextX=b.position.x+vel.x*remaining;
         if(Math.abs(nextX)<=wallBound)b.position.x=nextX;
         b.position.z+=vel.z*remaining;
-        hitImpact(impactPosition,0xff287f,ballPowerId(),'p2');
+        hitImpact(impactPosition,0xff287f,ballPowerId(),'p2',!isMain);
         paddle2.rotation.z=0;
       }
     }
@@ -3695,7 +3699,8 @@ void loop() {
   }
   function setMusicVolume(value){
     musicVolume=clamp(Number(value)||0,0,1.5);
-    // O valor fica guardado mesmo quando o áudio ainda não foi inicializado.
+    // Música de menu usa HTMLAudio independente; música da partida continua no Web Audio.
+    if(menuAudioElement&&!audioMuted)menuAudioElement.volume=clamp(musicVolume/1.2,0,1);
     if(audioCtx&&musicBusGain)musicBusGain.gain.setTargetAtTime(musicVolume,audioCtx.currentTime,.035);
     if($('music-volume-value'))$('music-volume-value').textContent=Math.round(musicVolume*100)+'%';
   }
