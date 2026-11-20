@@ -1188,6 +1188,128 @@
   window.addEventListener('venzer-quality-change',function(){window.dispatchEvent(new Event('resize'));},{passive:true});
 })();
 </script>
+
+
+<!-- VENZER PUB MENU — arte original do usuário com zonas de interação reais -->
+<style id="venzer-custom-menu-art-style">
+  #main-menu .menu-page.menu-home {
+    display:none; position:absolute; inset:0; width:100%; height:100%;
+    padding:0!important; align-items:center; justify-content:center; overflow:hidden;
+    background:#080604!important;
+  }
+  #main-menu .menu-page.menu-home.active { display:flex; }
+  #menu-page-home::before {
+    content:""; position:absolute; inset:-24px; z-index:0; pointer-events:none;
+    background:url('assets/venzer-menu-desktop.jpg') center/cover no-repeat;
+    filter:blur(22px) brightness(.36) saturate(1.08); transform:scale(1.06);
+  }
+  .venzer-menu-art-frame {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:min(100vw,179.1667vh); aspect-ratio:1376/768;
+    overflow:visible; isolation:isolate; z-index:1;
+    box-shadow:0 22px 80px rgba(0,0,0,.55);
+  }
+  .venzer-menu-art-frame>img {
+    position:absolute; inset:0; display:block; width:100%; height:100%;
+    object-fit:fill; pointer-events:none; user-select:none; -webkit-user-drag:none;
+  }
+  .venzer-menu-mobile-art { display:none!important; }
+  .venzer-menu-hit {
+    position:absolute; display:block; z-index:12; padding:0; margin:0;
+    border:0; border-radius:2.1%; background:transparent; color:transparent;
+    cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+    outline:none;
+  }
+  .venzer-menu-hit::before {
+    content:""; position:absolute; inset:-2px; border:1px solid transparent;
+    border-radius:inherit; opacity:0; pointer-events:none;
+    transition:opacity .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  .venzer-menu-hit::after {
+    content:""; position:absolute; inset:4px; border-radius:inherit; opacity:0;
+    pointer-events:none; background:linear-gradient(110deg,transparent,rgba(255,255,255,.22),transparent);
+    transform:translateX(-110%); transition:transform .65s ease,opacity .2s ease;
+  }
+  .venzer-menu-hit:hover::before,.venzer-menu-hit:focus-visible::before,
+  .venzer-menu-hit:active::before { opacity:1; }
+  .venzer-menu-hit:hover::after,.venzer-menu-hit:focus-visible::after { opacity:1; transform:translateX(110%); }
+  .venzer-hit-start { left:32.9%; top:43.3%; width:34.1%; height:11.6%; }
+  .venzer-hit-start::before { border-color:rgba(125,255,158,.95); box-shadow:0 0 18px rgba(55,255,112,.75),inset 0 0 20px rgba(63,255,117,.25); }
+  .venzer-hit-settings { left:35.2%; top:56.4%; width:29.6%; height:10.2%; }
+  .venzer-hit-settings::before { border-color:rgba(255,203,117,.96); box-shadow:0 0 18px rgba(255,157,55,.72),inset 0 0 18px rgba(255,176,73,.23); }
+  .venzer-hit-help { left:35.2%; top:67.2%; width:29.6%; height:10.1%; }
+  .venzer-hit-help::before { border-color:rgba(112,220,255,.98); box-shadow:0 0 18px rgba(48,187,255,.75),inset 0 0 18px rgba(48,187,255,.22); }
+  .venzer-hit-instagram { left:35.2%; top:78.0%; width:29.6%; height:10.1%; }
+  .venzer-hit-instagram::before { border-color:rgba(255,127,206,.98); box-shadow:0 0 18px rgba(255,45,160,.72),inset 0 0 18px rgba(255,45,160,.2); }
+  .venzer-hit-games { left:73.9%; top:36.7%; width:25.2%; height:17.0%; border-radius:5%; }
+  .venzer-hit-games::before { border-color:rgba(223,186,255,.98); box-shadow:0 0 23px rgba(163,105,255,.85),inset 0 0 22px rgba(163,105,255,.3); }
+
+  /* O seletor continua sendo HTML funcional, alinhado sobre o seletor desenhado na arte. */
+  #menu-page-home #graphics-quality-picker {
+    position:absolute!important; z-index:30; left:78.1%; top:10.7%; right:auto!important; bottom:auto!important;
+    width:20.5%; height:6.7%; font-family:'Manrope',sans-serif;
+  }
+  #menu-page-home #graphics-quality-toggle {
+    position:relative; width:100%; height:100%; min-height:0; padding:0!important;
+    border:0!important; border-radius:10px; background:transparent!important;
+    box-shadow:none!important; cursor:pointer; outline:none;
+  }
+  #menu-page-home #graphics-quality-toggle>i:first-child,
+  #menu-page-home #graphics-quality-toggle>span,
+  #menu-page-home #graphics-quality-toggle .quality-chevron { visibility:hidden; }
+  #menu-page-home #graphics-quality-toggle strong {
+    position:absolute; left:69.8%; top:50%; transform:translateY(-50%);
+    display:block; min-width:0; padding:0; color:#fff!important;
+    font-size:clamp(8px,1.02vw,14px)!important; font-weight:900!important;
+    line-height:1; letter-spacing:.025em!important; white-space:nowrap;
+    text-shadow:0 1px 4px rgba(0,0,0,.8);
+  }
+  #menu-page-home #graphics-quality-toggle:focus-visible {
+    outline:2px solid rgba(255,255,255,.9); outline-offset:2px;
+    box-shadow:0 0 18px rgba(255,255,255,.55)!important;
+  }
+  #menu-page-home .graphics-quality-options {
+    position:absolute; top:calc(100% + 8px); right:0; left:auto;
+    width:min(270px,28vw); z-index:60; display:grid; gap:6px; padding:9px;
+    border:1px solid rgba(229,187,119,.58); border-radius:13px;
+    background:linear-gradient(145deg,rgba(35,24,17,.99),rgba(10,10,12,.99));
+    box-shadow:0 14px 36px rgba(0,0,0,.72),0 0 20px rgba(255,194,119,.12);
+  }
+  #menu-page-home .graphics-quality-options[hidden] { display:none!important; }
+  #menu-page-home .graphics-quality-option { width:100%; min-height:42px; padding:8px; }
+  @media (max-width:720px) and (orientation:portrait) {
+    #menu-page-home::before { filter:blur(18px) brightness(.31); }
+    .venzer-menu-art-frame {
+      width:min(100vw,calc(100svh * .48913),620px);
+      aspect-ratio:900/1840;
+    }
+    .venzer-menu-desktop-art { display:none!important; }
+    .venzer-menu-mobile-art { display:block!important; }
+    .venzer-hit-start { left:4.4%; top:26.7%; width:91.2%; height:9.3%; }
+    .venzer-hit-settings { left:4.4%; top:36.6%; width:91.2%; height:9.9%; }
+    .venzer-hit-help { left:4.4%; top:46.6%; width:91.2%; height:10.0%; }
+    .venzer-hit-instagram { left:4.4%; top:56.6%; width:91.2%; height:10.2%; }
+    .venzer-hit-games { left:4.4%; top:67.1%; width:91.2%; height:18.5%; border-radius:5%; }
+    #menu-page-home #graphics-quality-picker {
+      left:28.9%; top:16.6%; right:auto!important; bottom:auto!important;
+      width:68.9%; height:7.8%;
+    }
+    #menu-page-home #graphics-quality-toggle strong {
+      left:70%; font-size:clamp(8px,2.5vw,13px)!important;
+    }
+    #menu-page-home .graphics-quality-options {
+      top:calc(100% + 5px); right:0; width:min(260px,82vw); padding:8px;
+    }
+    #menu-page-home .graphics-quality-option { min-height:40px; padding:7px; }
+  }
+  @media (max-height:520px) and (max-width:720px) and (orientation:portrait) {
+    .venzer-menu-art-frame { width:min(100vw,calc(100svh * .48913),620px); }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .venzer-menu-hit::before,.venzer-menu-hit::after { transition:none!important; }
+  }
+</style>
+
 </head>
 <body class="relative">
 <div aria-label="Mesa 3D do Pong" id="canvas-container"></div>
@@ -1232,112 +1354,37 @@
 <div class="fixed inset-0 z-20 flex items-center justify-center transition-all duration-300" id="main-menu">
 <!-- HOME: menu recriado em HTML/CSS 3D, sem imagens externas. -->
 <section aria-label="Menu principal do PONG VENZER" class="menu-page menu-home active" id="menu-page-home">
-<div class="pub-menu-scene">
-<div aria-hidden="true" class="pub-wall-texture"></div>
-<div aria-hidden="true" class="pub-back-glow pub-back-glow-one"></div>
-<div aria-hidden="true" class="pub-back-glow pub-back-glow-two"></div>
-<div aria-hidden="true" class="pub-shelf shelf-top">
-<span class="pub-bottle bottle-green"></span><span class="pub-bottle bottle-amber"></span>
-<span class="pub-bottle bottle-clear"></span><span class="pub-bottle bottle-red"></span>
-<span class="pub-bottle bottle-green short"></span><span class="pub-bottle bottle-amber short"></span>
-<span class="pub-bottle bottle-clear"></span><span class="pub-bottle bottle-dark"></span>
-<span class="pub-bottle bottle-green short"></span><span class="pub-bottle bottle-red"></span>
-<span class="pub-bottle bottle-amber"></span><span class="pub-bottle bottle-clear short"></span>
-</div>
-<div aria-hidden="true" class="pub-shelf shelf-bottom">
-<span class="pub-bottle bottle-dark"></span><span class="pub-bottle bottle-green short"></span>
-<span class="pub-bottle bottle-amber"></span><span class="pub-bottle bottle-clear short"></span>
-<span class="pub-bottle bottle-red"></span><span class="pub-bottle bottle-green"></span>
-<span class="pub-bottle bottle-amber short"></span><span class="pub-bottle bottle-dark"></span>
-</div>
-<div aria-hidden="true" class="pub-neon-sign"><span>VENZER PUB</span><small>ARCADE · SOCIAL CLUB</small></div>
-<div aria-hidden="true" class="pub-hanging-lamp lamp-left"><i></i></div>
-<div aria-hidden="true" class="pub-hanging-lamp lamp-right"><i></i></div>
-<div class="pub-menu-brand">
-<div class="pub-brand-kicker"><span></span> LOCUTOR VENZER · APRESENTA <span></span></div>
-<div class="pub-brand-emblem"><i class="fa-solid fa-crown"></i></div>
-<h1><span>PONG</span> <strong>VENZER</strong></h1>
-<p>JOGUE <b>•</b> DIVIRTA-SE <b>•</b> VENÇA</p>
-</div>
-<div class="pub-menu-content">
-<div class="pub-menu-intro">
-<span class="pub-menu-eyebrow">A SUA PRÓXIMA PARTIDA COMEÇA AQUI</span>
-<h2>Entre no jogo.</h2>
-<p>Escolha uma opção e venha para a mesa.</p>
-</div>
-<nav aria-label="Opções principais" class="pub-menu-buttons">
-<button class="pub-menu-button pub-button-start" onclick="openMenuPage('start')" type="button">
-<span class="pub-button-icon"><i class="fa-solid fa-play"></i></span>
-<span class="pub-button-copy"><strong>COMEÇAR</strong><small>Escolha o seu modo de jogo</small></span>
-<span class="pub-button-arrow"><i class="fa-solid fa-chevron-right"></i></span>
-</button>
+  <div class="venzer-menu-art-frame" id="venzer-menu-art-frame">
+    <img class="venzer-menu-desktop-art" src="assets/venzer-menu-desktop.jpg" alt="Menu principal do Locutor Venzer no Venzer Pub" draggable="false">
+    <img class="venzer-menu-mobile-art" src="assets/venzer-menu-mobile.jpg" alt="Menu principal do Locutor Venzer adaptado para celular" draggable="false">
 
-<button class="pub-menu-button pub-button-settings" onclick="openMenuPage('settings')" type="button">
-<span class="pub-button-icon"><i class="fa-solid fa-sliders"></i></span>
-<span class="pub-button-copy"><strong>CONFIGURAÇÕES</strong><small>Som da música e dos efeitos</small></span>
-<span class="pub-button-arrow"><i class="fa-solid fa-chevron-right"></i></span>
-</button>
-<button class="pub-menu-button pub-button-help" onclick="openMenuPage('help')" type="button">
-<span class="pub-button-icon"><i class="fa-solid fa-book-open"></i></span>
-<span class="pub-button-copy"><strong>COMO JOGAR</strong><small>Controles, Arduino e poderes</small></span>
-<span class="pub-button-arrow"><i class="fa-solid fa-chevron-right"></i></span>
-</button>
-<a class="pub-menu-button pub-button-instagram" href="https://www.instagram.com/locutorvenzer" rel="noopener noreferrer" target="_blank">
-<span class="pub-button-icon"><i class="fa-brands fa-instagram"></i></span>
-<span class="pub-button-copy"><strong>VISITE O INSTAGRAM</strong><small>@locutorvenzer · Conheça o criador</small></span>
-<span class="pub-button-arrow"><i class="fa-solid fa-arrow-up-right-from-square"></i></span>
-</a>
-</nav>
-<div class="pub-menu-note"><i class="fa-solid fa-record-vinyl"></i> PUB PREMIUM EDITION <span>·</span> 3D ARCADE EXPERIENCE</div>
-</div>
-<button aria-label="Abrir Mais Jogos: explore os jogos do universo Venzer" class="pub-arcade-discovery" onclick="openMenuPage('games')" type="button">
-  <span class="arcade-discovery-icon"><i class="fa-solid fa-gamepad"></i></span>
-  <span class="arcade-discovery-copy">
-    <small class="arcade-discovery-kicker"><i class="fa-solid fa-sparkles"></i> VENZER ARCADE · EXPLORE</small>
-    <strong>MAIS JOGOS</strong>
-    <span class="arcade-discovery-sub">Outras aventuras esperam por você</span>
-    <span class="arcade-discovery-action">ENTRAR NA ARCADE <i class="fa-solid fa-arrow-right"></i></span>
-  </span>
-  <span class="arcade-discovery-count">8<br><small>JOGOS</small></span>
-</button>
-<div aria-hidden="true" class="pub-table-display">
-<div class="pub-table-shadow"></div>
-<div class="pub-table-legs"><i></i><i></i><i></i></div>
-<div class="pub-table-frame">
-<div class="pub-table-top">
-<span class="pub-table-side-line left"></span><span class="pub-table-side-line right"></span>
-<span class="pub-table-center-line"></span><span class="pub-table-net"></span>
-<span class="pub-table-mark mark-one"></span><span class="pub-table-mark mark-two"></span>
-</div>
-<span class="pub-table-wood-edge"></span>
-</div>
-<div class="pub-menu-ball"></div>
-<div class="pub-menu-paddle paddle-red"></div>
-<div class="pub-menu-paddle paddle-black"></div>
-</div>
-<div aria-hidden="true" class="pub-floor-planks"></div>
-<div class="pub-menu-bottomline"><span>DESAFIE SEUS REFLEXOS</span><span>VENZER PUB · EST. 2026</span></div>
-</div>
-<div class="graphics-quality-picker" id="graphics-quality-picker">
-  <button aria-controls="graphics-quality-options" aria-expanded="false" aria-label="Escolher qualidade gráfica" class="graphics-quality-toggle" id="graphics-quality-toggle" onclick="toggleGraphicsQualityMenu()" type="button">
-    <i class="fa-solid fa-sliders"></i>
-    <span>QUALIDADE GRÁFICA</span>
-    <strong id="graphics-quality-current">BAIXO</strong>
-    <i class="fa-solid fa-chevron-down quality-chevron"></i>
-  </button>
-  <div class="graphics-quality-options" hidden id="graphics-quality-options">
-    <div class="graphics-quality-caption">ESCOLHA O NÍVEL DE RENDERIZAÇÃO</div>
-    <button class="graphics-quality-option" data-quality="low" onclick="setGraphicsQuality('low')" type="button">
-      <i class="fa-solid fa-leaf"></i><span><strong>BAIXO</strong><small>Maior desempenho · padrão recomendado</small></span><i class="fa-solid fa-check quality-check"></i>
-    </button>
-    <button class="graphics-quality-option" data-quality="medium" onclick="setGraphicsQuality('medium')" type="button">
-      <i class="fa-solid fa-gauge"></i><span><strong>MÉDIO</strong><small>Mais definição e sombras moderadas</small></span><i class="fa-solid fa-check quality-check"></i>
-    </button>
-    <button class="graphics-quality-option" data-quality="high" onclick="setGraphicsQuality('high')" type="button">
-      <i class="fa-solid fa-gem"></i><span><strong>ALTO</strong><small>Antialiasing, sombras e renderização máxima</small></span><i class="fa-solid fa-check quality-check"></i>
-    </button>
+    <button aria-label="Começar partida" class="venzer-menu-hit venzer-hit-start" onclick="openMenuPage('start')" title="Começar partida" type="button"></button>
+    <button aria-label="Abrir configurações de som" class="venzer-menu-hit venzer-hit-settings" onclick="openMenuPage('settings')" title="Configurações" type="button"></button>
+    <button aria-label="Abrir Como Jogar" class="venzer-menu-hit venzer-hit-help" onclick="openMenuPage('help')" title="Como jogar" type="button"></button>
+    <a aria-label="Visitar Instagram do Locutor Venzer" class="venzer-menu-hit venzer-hit-instagram" href="https://www.instagram.com/locutorvenzer" rel="noopener noreferrer" target="_blank" title="Visite o Instagram"></a>
+    <button aria-label="Abrir catálogo Mais Jogos" class="venzer-menu-hit venzer-hit-games" onclick="openMenuPage('games')" title="Mais jogos" type="button"></button>
+
+    <div class="graphics-quality-picker" id="graphics-quality-picker">
+      <button aria-controls="graphics-quality-options" aria-expanded="false" aria-label="Escolher qualidade gráfica" class="graphics-quality-toggle" id="graphics-quality-toggle" onclick="toggleGraphicsQualityMenu()" type="button">
+        <i class="fa-solid fa-sliders"></i>
+        <span>QUALIDADE GRÁFICA</span>
+        <strong id="graphics-quality-current">BAIXO</strong>
+        <i class="fa-solid fa-chevron-down quality-chevron"></i>
+      </button>
+      <div class="graphics-quality-options" hidden id="graphics-quality-options">
+        <div class="graphics-quality-caption">ESCOLHA O NÍVEL DE RENDERIZAÇÃO</div>
+        <button class="graphics-quality-option" data-quality="low" onclick="setGraphicsQuality('low')" type="button">
+          <i class="fa-solid fa-leaf"></i><span><strong>BAIXO</strong><small>Maior desempenho · padrão recomendado</small></span><i class="fa-solid fa-check quality-check"></i>
+        </button>
+        <button class="graphics-quality-option" data-quality="medium" onclick="setGraphicsQuality('medium')" type="button">
+          <i class="fa-solid fa-gauge"></i><span><strong>MÉDIO</strong><small>Mais definição e sombras moderadas</small></span><i class="fa-solid fa-check quality-check"></i>
+        </button>
+        <button class="graphics-quality-option" data-quality="high" onclick="setGraphicsQuality('high')" type="button">
+          <i class="fa-solid fa-gem"></i><span><strong>ALTO</strong><small>Antialiasing, sombras e renderização máxima</small></span><i class="fa-solid fa-check quality-check"></i>
+        </button>
+      </div>
+    </div>
   </div>
-</div>
 </section>
 
 <!-- GAMES: catálogo de jogos extras integrados ao PONG VENZER principal. -->
