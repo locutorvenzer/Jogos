@@ -1298,7 +1298,7 @@
     <span class="arcade-discovery-sub">Outras aventuras esperam por você</span>
     <span class="arcade-discovery-action">ENTRAR NA ARCADE <i class="fa-solid fa-arrow-right"></i></span>
   </span>
-  <span class="arcade-discovery-count">7<br><small>JOGOS</small></span>
+  <span class="arcade-discovery-count">8<br><small>JOGOS</small></span>
 </button>
 <div aria-hidden="true" class="pub-table-display">
 <div class="pub-table-shadow"></div>
@@ -1634,11 +1634,14 @@ void loop() {
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const rand=(min,max)=>min+Math.random()*(max-min);
 
-  /* Música instrumental lounge gerada pela Web Audio API: piano suave, baixo macio,
-     pads harmônicos e percussão de vassourinhas. Sem timbres 8-bit ou samples externos. */
-  /* ------------------------- ÁUDIO PUB / CINEMATOGRÁFICO ------------------------- */
-  const PUB_MENU_CHORDS = [
-    [50,53,57,60,64], [46,50,53,57,62], [41,48,53,57,60,64], [48,52,55,57,62]
+  /* Trilha principal em estilo festival EDM / big-room, criada proceduralmente
+     com Web Audio API. Composição original, sem samples ou músicas de terceiros. */
+  /* ------------------------- ÁUDIO FESTIVAL EDM ------------------------- */
+  const FESTIVAL_MENU_CHORDS = [
+    [57,60,64,67,71],  // Am9
+    [53,57,60,64,69],  // Fmaj9
+    [48,52,55,59,64],  // Cmaj9
+    [55,59,62,65,69]   // G9
   ];
   const PUB_GAME_CHORDS = [
     [55,59,62,66,69], [52,55,59,62,66], [48,52,55,59,64], [50,54,57,60,64]
@@ -1797,25 +1800,144 @@ void loop() {
     softTone(f*2,.22,volume*.18,when,{wave:'triangle',cutoff:520,attack:.01,release:.14,send:.025},bus);
   }
 
+  function scheduleArcadeMenuStep(step,when){
+    const bus=menuMusicGain;
+    const bpm=128,beat=60/bpm,bar=Math.floor(step/4),beatInBar=step%4;
+    const phraseBar=bar%8;
+    const drop=phraseBar>=4;
+    const chord=FESTIVAL_MENU_CHORDS[bar%FESTIVAL_MENU_CHORDS.length];
+    const root=chord[0];
+
+    // Baixo de festival: kick firme em todos os tempos, com sub grave e ataque curto.
+    softTone(132,.22,drop?.105:.082,when,{
+      wave:'sine',slideTo:43,cutoff:230,attack:.002,release:.16,decay:true,send:.008
+    },bus);
+    softNoise(.018,drop?.020:.014,7200,when,{
+      filterType:'highpass',endCutoff:3600,attack:.001,q:.5,send:.008
+    },bus);
+
+    // Clap / snare nos tempos 2 e 4, em camadas para dar sensação de palco grande.
+    if(beatInBar===1||beatInBar===3){
+      softNoise(.125,drop?.050:.038,7800,when,{
+        filterType:'bandpass',endCutoff:2100,attack:.003,q:.62,
+        pan:beatInBar===1?-.08:.08,send:.04
+      },bus);
+      softNoise(.095,drop?.024:.018,6200,when+.012,{
+        filterType:'highpass',endCutoff:1800,attack:.002,q:.48,send:.025
+      },bus);
+      softTone(205,.105,.022,when,{
+        wave:'triangle',slideTo:132,cutoff:520,attack:.003,release:.085,decay:true,send:.012
+      },bus);
+    }
+
+    // Hi-hats em colcheias; o contratempo abre o som para dar balanço de pista.
+    softNoise(.026,drop?.012:.009,10500,when,{
+      filterType:'highpass',endCutoff:6900,attack:.0015,pan:-.12,send:.008
+    },bus);
+    softNoise(.052,drop?.014:.010,9800,when+beat*.5,{
+      filterType:'highpass',endCutoff:5100,attack:.002,pan:.14,send:.012
+    },bus);
+    if(beatInBar===3){
+      for(let n=0;n<4;n++){
+        softNoise(.018,.0065,9200,when+beat*(.55+n*.105),{
+          filterType:'highpass',endCutoff:6500,attack:.001,pan:(n%2?-.2:.2),send:.006
+        },bus);
+      }
+    }
+
+    // Sub-bass e mid-bass sincopados, alternando raiz, quinta e oitava.
+    const bassSteps=[0,7,12,7];
+    const bassMidi=root-24+bassSteps[beatInBar];
+    softTone(midiHz(bassMidi),.27,drop?.064:.048,when,{
+      wave:'sine',cutoff:260,attack:.006,release:.20,decay:true,send:.008
+    },bus);
+    softTone(midiHz(bassMidi+12),.17,drop?.026:.019,when,{
+      wave:'sawtooth',cutoff:760,attack:.004,release:.12,decay:true,send:.012
+    },bus);
+    softTone(midiHz(root-12+bassSteps[beatInBar]),.12,.013,when+beat*.5,{
+      wave:'triangle',cutoff:1100,attack:.003,release:.085,decay:true,send:.008
+    },bus);
+
+    // Camada harmônica ampla: acordes saw detunados com abertura nos tempos fortes.
+    if(beatInBar===0){
+      chord.slice(0,4).forEach((m,i)=>{
+        softTone(midiHz(m+12),1.72,drop?.009:.0065,when,{
+          wave:'sawtooth',cutoff:2300,attack:.15,release:.48,decay:false,
+          detune:(i-1.5)*5.5,pan:(i-1.5)*.19,send:.10
+        },bus);
+        softTone(midiHz(m+24)*1.003,1.48,drop?.0048:.0035,when+.012,{
+          wave:'triangle',cutoff:3400,attack:.18,release:.42,
+          detune:(1.5-i)*3.4,pan:(i-1.5)*-.15,send:.085
+        },bus);
+      });
+    }
+    if(beatInBar===0||beatInBar===2){
+      chord.slice(0,4).forEach((m,i)=>softTone(midiHz(m+12),.30,drop?.019:.014,when,{
+        wave:'sawtooth',cutoff:3900,attack:.006,release:.22,decay:true,
+        detune:(i-1.5)*4.2,pan:(i-1.5)*.16,send:.045
+      },bus));
+    }else{
+      // Stabs nos contratempos, característicos do big-room / festival house.
+      chord.slice(1,4).forEach((m,i)=>softTone(midiHz(m+12),.19,.010,when+beat*.5,{
+        wave:'sawtooth',cutoff:3300,attack:.004,release:.14,decay:true,
+        detune:(i-1)*3,pan:(i-1)*.2,send:.035
+      },bus));
+    }
+
+    // Lead melódico com frase crescente e respostas em oitava alta.
+    const leadPattern=[4,2,3,1,2,4,3,2,4,3,1,2,3,4,2,1];
+    const leadOctaves=[24,12,24,12,17,24,12,17,24,17,12,24,17,24,12,17];
+    const phraseStep=step%16;
+    const leadMidi=chord[leadPattern[phraseStep]%chord.length]+leadOctaves[phraseStep];
+    softTone(midiHz(leadMidi),.205,drop?.022:.016,when,{
+      wave:'sawtooth',cutoff:5800,attack:.004,release:.15,decay:true,
+      detune:-3.5,pan:-.16,send:.045
+    },bus);
+    const answer=chord[(leadPattern[(phraseStep+5)%16]+1)%chord.length]+12;
+    softTone(midiHz(answer),.13,drop?.012:.0085,when+beat*.5,{
+      wave:'triangle',cutoff:5200,attack:.003,release:.095,decay:true,
+      pan:.18,send:.028
+    },bus);
+
+    // A cada oito compassos, o último compasso ganha uma subida curta e o seguinte abre o drop.
+    if(phraseBar===7&&beatInBar===3){
+      softNoise(.47,.026,1800,when+.025,{
+        filterType:'highpass',endCutoff:11200,attack:.36,q:.7,send:.10
+      },bus);
+      for(let n=0;n<6;n++){
+        const t=when+beat*(.34+n*.095);
+        softTone(midiHz(leadMidi+12+n*2),.085,.011,t,{
+          wave:'sawtooth',cutoff:7000,attack:.002,release:.06,decay:true,
+          pan:n%2?-.24:.24,send:.025
+        },bus);
+      }
+    }
+    if(phraseBar===4&&beatInBar===0){
+      softNoise(.34,.035,9800,when,{
+        filterType:'highpass',endCutoff:2300,attack:.006,q:.55,send:.13
+      },bus);
+      softTone(58,.42,.082,when,{
+        wave:'sine',slideTo:34,cutoff:150,attack:.008,release:.32,decay:true,send:.045
+      },bus);
+    }
+  }
+
   function scheduleLoungeStep(kind,step,when){
     const menu=kind==='menu',bus=menu?menuMusicGain:gameMusicGain;
-    const bpm=menu?78:96,beat=60/bpm,bar=Math.floor(step/4),beatInBar=step%4;
-    const chords=menu?PUB_MENU_CHORDS:PUB_GAME_CHORDS;
-    const chord=chords[bar%chords.length];
+    if(menu){scheduleArcadeMenuStep(step,when);return;}
+    const beat=60/96,bar=Math.floor(step/4),beatInBar=step%4;
+    const chord=PUB_GAME_CHORDS[bar%PUB_GAME_CHORDS.length];
     const padLength=beat*3.9;
     if(beatInBar===0){
-      chord.forEach((m,i)=>padNote(m,when,padLength,bus,(menu?.019:.016)/(i===0?1.2:1),((i%3)-1)*.18));
-      // Um acorde de piano espaçado, sem timbres de videogame retrô.
-      pianoNote(chord[2]+12,when+.08,bus,menu?.034:.030,-.12);
-      pianoNote(chord[3]+12,when+beat*1.95,bus,menu?.022:.022,.13);
+      chord.forEach((m,i)=>padNote(m,when,padLength,bus,.016/(i===0?1.2:1),((i%3)-1)*.18));
+      pianoNote(chord[2]+12,when+.08,bus,.030,-.12);
+      pianoNote(chord[3]+12,when+beat*1.95,bus,.022,.13);
     }
     const bassPattern=[0,7,10,7];
-    bassNote(chord[0]-12+bassPattern[beatInBar],when,bus,menu?.030:.038);
+    bassNote(chord[0]-12+bassPattern[beatInBar],when,bus,.038);
     if(beatInBar===1||beatInBar===3){
       const note=chord[(bar+beatInBar)%chord.length]+12;
-      pianoNote(note,when,bus,menu?.018:.022,beatInBar===1?-.22:.22);
-    }
-    if(!menu&&(beatInBar===1||beatInBar===3)){
+      pianoNote(note,when,bus,.022,beatInBar===1?-.22:.22);
       softNoise(.16,.007,1900,when,{filterType:'bandpass',q:.45,pan:beatInBar===1?-.25:.25,send:.08},bus);
     }
   }
@@ -1824,7 +1946,7 @@ void loop() {
     const isMenu=kind==='menu';
     const requested=isMenu?menuMusicRequested:gameMusicRequested;
     if(!requested||!audioCtx||audioCtx.state!=='running'||audioMuted)return;
-    const bpm=isMenu?78:96,stepLength=60/bpm,now=audioCtx.currentTime;
+    const bpm=isMenu?128:96,stepLength=60/bpm,now=audioCtx.currentTime;
     let next=isMenu?menuMusicNextTime:gameMusicNextTime;
     let step=isMenu?menuMusicStep:gameMusicStep;
     if(next<now-.12){const missed=Math.ceil((now-next)/stepLength);next+=missed*stepLength;step+=missed;}
@@ -1848,7 +1970,7 @@ void loop() {
     if(!menuMusicRequested||!audioCtx||audioCtx.state!=='running'||menuMusicTimer!==null||audioMuted)return;
     if(!ensureMenuMusicBus())return;
     const now=audioCtx.currentTime;menuMusicGain.gain.cancelScheduledValues(now);
-    menuMusicGain.gain.setValueAtTime(menuMusicGain.gain.value,now);menuMusicGain.gain.linearRampToValueAtTime(.86,now+1.35);
+    menuMusicGain.gain.setValueAtTime(menuMusicGain.gain.value,now);menuMusicGain.gain.linearRampToValueAtTime(1.18,now+1.35);
     menuMusicStep=0;menuMusicNextTime=now+.08;menuMusicTimer=window.setInterval(pumpMenuMusic,45);pumpMenuMusic();
   }
   function startMenuMusic(){
