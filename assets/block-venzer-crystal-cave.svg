@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1060" viewBox="0 0 900 1060">
+<defs>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#10163c"/><stop offset=".52" stop-color="#281958"/><stop offset="1" stop-color="#100c26"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#4e8cff" stop-opacity=".35"/><stop offset="1" stop-color="#27165b" stop-opacity="0"/></radialGradient>
+ <linearGradient id="rock" x2=".8" y2="1"><stop stop-color="#48386f"/><stop offset=".55" stop-color="#272044"/><stop offset="1" stop-color="#12152f"/></linearGradient>
+ <linearGradient id="crystal" x2="1" y2="1"><stop stop-color="#eafcff"/><stop offset=".22" stop-color="#62e8ff"/><stop offset=".56" stop-color="#477cff"/><stop offset="1" stop-color="#251d88"/></linearGradient>
+ <linearGradient id="violet" x2="1" y2="1"><stop stop-color="#fff0ff"/><stop offset=".3" stop-color="#d58aff"/><stop offset="1" stop-color="#5729b7"/></linearGradient>
+ <linearGradient id="gold" x2="0" y2="1"><stop stop-color="#fff4be"/><stop offset=".3" stop-color="#ffc35d"/><stop offset="1" stop-color="#a94a32"/></linearGradient>
+ <filter id="blur"><feGaussianBlur stdDeviation="28"/></filter>
+ <filter id="shine"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <pattern id="stars" width="130" height="120" patternUnits="userSpaceOnUse"><circle cx="19" cy="23" r="1.6" fill="#dcefff" opacity=".7"/><circle cx="78" cy="66" r="1" fill="#f6c7ff" opacity=".7"/><circle cx="113" cy="18" r="1.2" fill="#73e9ff" opacity=".7"/></pattern>
+</defs>
+<rect width="900" height="1060" fill="url(#sky)"/><rect width="900" height="1060" fill="url(#stars)"/>
+<ellipse cx="450" cy="330" rx="360" ry="430" fill="url(#glow)"/>
+<circle cx="750" cy="170" r="105" fill="#7a8eff" opacity=".12" filter="url(#blur)"/><circle cx="150" cy="560" r="120" fill="#c35cff" opacity=".12" filter="url(#blur)"/>
+<!-- distant crystal spires -->
+<g opacity=".58" filter="url(#shine)">
+ <path d="M62 645 88 493 111 645Z" fill="url(#violet)"/><path d="M100 648 143 410 180 648Z" fill="url(#crystal)"/><path d="M810 615 843 442 875 615Z" fill="url(#crystal)"/><path d="M754 626 788 500 820 626Z" fill="url(#violet)"/>
+</g>
+<!-- left cliff -->
+<path d="M0 0 112 0 95 88 146 165 117 238 178 315 127 391 165 472 111 542 150 615 88 692 132 776 85 847 125 920 63 1060H0Z" fill="url(#rock)" stroke="#8e78c6" stroke-opacity=".25" stroke-width="5"/>
+<path d="M0 0 65 115 42 205 104 305 61 399 118 510 53 615 98 705 40 812 80 930 0 1060Z" fill="#100f2b" opacity=".55"/>
+<!-- right cliff -->
+<path d="M900 0H790l23 94-42 72 55 87-53 92 57 79-38 98 58 83-48 95 44 90-50 91 53 87-42 92h93Z" fill="url(#rock)" stroke="#9471cb" stroke-opacity=".25" stroke-width="5"/>
+<!-- crystal clusters left -->
+<g filter="url(#shine)">
+ <path d="M45 718 82 535 123 718Z" fill="url(#crystal)" stroke="#9ff5ff" stroke-width="3"/><path d="M93 740 144 586 187 740Z" fill="url(#violet)" stroke="#e5b6ff" stroke-width="3"/><path d="M18 857 52 708 89 857Z" fill="url(#gold)" stroke="#ffe7a2" stroke-width="3"/>
+ <path d="M54 717 82 535 84 720Z" fill="#fff" opacity=".42"/><path d="M113 730 144 586 150 730Z" fill="#fff" opacity=".35"/>
+</g>
+<g filter="url(#shine)">
+ <path d="M820 754 864 545 896 754Z" fill="url(#crystal)" stroke="#9ff5ff" stroke-width="3"/><path d="M755 800 791 635 828 800Z" fill="url(#violet)" stroke="#ddb1ff" stroke-width="3"/><path d="M838 925 875 760 900 925Z" fill="url(#gold)" stroke="#ffe7a2" stroke-width="3"/>
+ <path d="M842 750 864 545 869 750Z" fill="#fff" opacity=".4"/>
+</g>
+<!-- distant floating ruins -->
+<g fill="#211d45" stroke="#8a7ad3" stroke-opacity=".35" stroke-width="4" opacity=".8">
+ <path d="M150 330h105v17H150zM164 347v95h14v-95M226 347v95h14v-95M142 442h120v13H142z"/>
+ <path d="M655 270h115v17H655zM670 287v95h14v-95M742 287v95h14v-95M645 382h135v13H645z"/>
+</g>
+<!-- floor -->
+<path d="M0 900Q120 820 245 920T490 914T730 910T900 870V1060H0Z" fill="#17132e" stroke="#66519a" stroke-opacity=".5" stroke-width="5"/>
+<path d="M0 975Q170 905 310 982T610 970T900 946" fill="none" stroke="#4d9dff" stroke-opacity=".3" stroke-width="9" filter="url(#shine)"/>
+<g opacity=".8" filter="url(#shine)">
+ <path d="M250 1000 279 890 305 1000Z" fill="url(#crystal)"/><path d="M298 1018 329 932 354 1018Z" fill="url(#violet)"/><path d="M590 1015 624 906 655 1015Z" fill="url(#crystal)"/><path d="M640 1032 675 940 704 1032Z" fill="url(#gold)"/>
+</g>
+<!-- glowing central aisle kept open for board -->
+<ellipse cx="450" cy="800" rx="270" ry="380" fill="#12122f" opacity=".38"/>
+<path d="M195 1025 330 935 570 935 710 1025" fill="none" stroke="#7c91ff" stroke-opacity=".24" stroke-width="6"/>
+</svg>
